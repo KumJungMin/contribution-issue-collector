@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import streamlit.components.v1 as components
 
-def fetch_issues(repo, pages=2, per_page=5, exclude_pr=True, token=None):
+def fetch_issues(repo, pages=2, per_page=15, token=None):
     issues = []
     headers = {}
     if token:
@@ -17,8 +17,6 @@ def fetch_issues(repo, pages=2, per_page=5, exclude_pr=True, token=None):
             st.error(f"API 요청 실패: {e}")
             return []
         for issue in res.json():
-            if exclude_pr and "pull_request" in issue:
-                continue
             issues.append({
                 "title": issue.get("title", ""),
                 "body": (issue.get("body") or "")[:500],
@@ -29,20 +27,18 @@ def fetch_issues(repo, pages=2, per_page=5, exclude_pr=True, token=None):
 st.title("🛠️ GitHub 이슈 수집기 (Google AI Studio 분석용)")
 
 repo_input = st.text_input("🔗 GitHub 저장소 (형식: owner/repo)", "vercel/next.js")
-pages = st.slider("📄 페이지 수 (1페이지당 5개)", 1, 10, 3)
-exclude_pr = st.checkbox("🔒PR(풀 리퀘스트) 제외", value=True)
+pages = st.slider("📄 페이지 수 (1페이지당 15개)", 1, 10, 3)
 # token = st.text_input("🔑 GitHub Personal Access Token (선택)", type="password")  # 필요시 활성화
 
 if st.button("이슈 수집하기"):
     with st.spinner("이슈 수집 중..."):
-        issues = fetch_issues(repo_input, pages, 5, exclude_pr)  # token=token 도 가능
+        issues = fetch_issues(repo_input, pages)  # token=token 도 가능
 
     if not issues:
         st.warning("이슈가 없거나 조건에 맞는 항목이 없습니다.")
     else:
         st.info(f"🔍 총 {len(issues)}개의 이슈가 수집되었습니다.")
 
-        # 이슈 마크다운 생성
         markdown_list = [
             f"""## Issue {i}
 **Title**: {issue['title']}
@@ -56,7 +52,6 @@ if st.button("이슈 수집하기"):
         ]
         markdown_text = "\n".join(markdown_list)
 
-        # 프롬프트 생성
         prompt = f"""너는 오픈소스에 기여하려는 오픈소스 기여 경험이 많은 10년차 개발자야.
 
 위의 이슈들을 검색해서 내용을 읽어보고 밑의 기여하기 좋은 기준에 맞게 분류해줘.
